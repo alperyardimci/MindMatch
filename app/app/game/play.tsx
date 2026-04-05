@@ -213,7 +213,7 @@ export default function PlayScreen() {
       <Modal visible={showResult && !!state.roundResult} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => setShowResult(false)}>
           <Animated.View entering={ZoomIn.springify()} style={styles.resultSheet}>
-            {state.roundResult && <RoundResultView result={state.roundResult} />}
+            {state.roundResult && <RoundResultView result={state.roundResult} roundEmojis={state.emojis} />}
             <Text style={styles.tapHint}>Tap to continue</Text>
           </Animated.View>
         </Pressable>

@@ -18,7 +18,7 @@
   "pickedCount": "{{count}}/{{total}} seçti",
   "youScored": "Puan kazandın!",
   "noPoint": "Başka biri de aynısını seçti!",
-  "uniquePick": "Benzersiz!",
+  "uniquePick": "Benzersiz",
   "duplicatePick": "Tekrar",
   "gameOver": "Oyun Bitti!",
   "winner": "Kazanan",
@@ -36,5 +36,9 @@
   "connectionError": "Bağlantı hatası",
   "autoPickWarning": "Süre doldu! Rastgele seçim yapıldı.",
   "pointsToWin": "puan kazanmak için",
-  "language": "Dil"
+  "language": "Dil",
+  "uniqueSection": "Benzersiz Seçimler",
+  "telepathicBond": "Telepatik Bağ",
+  "notPicked": "Seçilmeyen",
+  "samePicked": "{{count}} kişi aynı seçti"
 }

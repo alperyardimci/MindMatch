@@ -1,14 +1,16 @@
-# MindMatch / Akil Tutulmasi
+# Mind Match / Akıl Tutulması
 
 <div align="center">
 
 <img src="app/assets/icon.png" width="120" height="120" alt="MindMatch Logo" style="border-radius: 24px;" />
 
-### Think Different, Score Points!
+### Farklı Düşün, Puan Kazan! / Think Different, Score Points!
 
 A real-time multiplayer emoji telepathy game for iOS and Android.
 
 Pick the emoji **no one else** picks. Unique choice = point. First to the target score wins.
+
+**TR:** Kimsenin seçmeyeceği emojiyi seç. Benzersiz seçim = puan. Hedef puana ilk ulaşan kazanır.
 
 [Getting Started](#getting-started) · [How to Play](#how-to-play) · [Tech Stack](#tech-stack) · [Project Structure](#project-structure)
 
@@ -46,11 +48,11 @@ Enter a friend's 4-character room code to join their game.
 - **Cross-platform** — iOS and Android via React Native (Expo)
 - **Real-time multiplayer** — Socket.io powered, instant synchronization
 - **500+ emojis** — Twemoji PNG library, randomized each round, no repeats within a round
-- **Bilingual** — Full Turkish and English support with one-tap language switching
+- **Bilingual** — Full Turkish (Akıl Tutulması) and English (Mind Match) support with one-tap language switching
 - **15-second timer** — Circular SVG countdown with visual urgency at 5 seconds
 - **Auto-pick** — If time runs out, a random emoji is selected automatically
 - **Live scoreboard** — Animated progress bars showing each player's progress toward the target
-- **Round results** — See exactly who picked what, with unique/duplicate highlighting
+- **Emoji-grouped results** — Round results grouped by emoji: unique picks, telepathic bonds (duplicates), and unpicked emojis at a glance
 - **Modern dark UI** — Purple-accented dark theme with smooth Reanimated animations
 - **Room codes** — 4-character alphanumeric codes (confusable characters excluded)
 
@@ -168,12 +170,12 @@ LOBBY → PICKING → REVEAL → PICKING → ... → FINISHED
 For each emoji picked this round:
   count = number of players who picked this emoji
   if count == 1:
-    that player scores +1 (unique pick)
+    that player scores +1 (unique pick)    → shown as "Benzersiz / Unique"
   else:
-    all players who picked it score 0 (duplicate)
+    all players who picked it score 0      → shown as "Telepatik Bağ / Telepathic Bond"
 ```
 
-All scoring is **server-authoritative**. The client never computes scores.
+Results are grouped by emoji, not by player — making it instantly clear who formed a "telepathic bond" by picking the same emoji. All scoring is **server-authoritative**.
 
 ## Getting Started
 

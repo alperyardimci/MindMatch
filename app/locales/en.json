@@ -18,7 +18,7 @@
   "pickedCount": "{{count}}/{{total}} picked",
   "youScored": "You scored a point!",
   "noPoint": "Someone else picked the same!",
-  "uniquePick": "Unique!",
+  "uniquePick": "Unique",
   "duplicatePick": "Duplicate",
   "gameOver": "Game Over!",
   "winner": "Winner",
@@ -36,5 +36,9 @@
   "connectionError": "Connection error",
   "autoPickWarning": "Time's up! Random pick made.",
   "pointsToWin": "points to win",
-  "language": "Language"
+  "language": "Language",
+  "uniqueSection": "Unique Picks",
+  "telepathicBond": "Telepathic Bond",
+  "notPicked": "Not Picked",
+  "samePicked": "{{count}} picked the same"
 }
