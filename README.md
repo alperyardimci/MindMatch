@@ -1,0 +1,245 @@
+# MindMatch / Akil Tutulmasi
+
+<div align="center">
+
+<img src="app/assets/icon.png" width="120" height="120" alt="MindMatch Logo" style="border-radius: 24px;" />
+
+### Think Different, Score Points!
+
+A real-time multiplayer emoji telepathy game for iOS and Android.
+
+Pick the emoji **no one else** picks. Unique choice = point. First to the target score wins.
+
+[Getting Started](#getting-started) · [How to Play](#how-to-play) · [Tech Stack](#tech-stack) · [Project Structure](#project-structure)
+
+</div>
+
+---
+
+## How to Play
+
+1. **N players** are shown **N emojis** at the start of each round
+2. Each player **secretly picks** one emoji within 15 seconds
+3. After all picks are locked in, everyone's choices are revealed
+4. Players who picked a **unique emoji** (no one else picked it) earn **+1 point**
+5. Players who picked the **same emoji** as someone else earn **0 points**
+6. First player to reach the **target score** wins the game
+
+The catch? You need to **think differently** from everyone else. The more predictable your choice, the less likely you are to score.
+
+## Game Modes
+
+### Random Play
+Jump into a quick 5-player game instantly. Target score is 5 points. No waiting, no setup — just tap and play.
+
+### Create Room
+Host a private game for friends:
+- Set a custom target score (1–50)
+- Get a 4-character room code to share
+- Start the game when everyone has joined
+
+### Join Room
+Enter a friend's 4-character room code to join their game.
+
+## Features
+
+- **Cross-platform** — iOS and Android via React Native (Expo)
+- **Real-time multiplayer** — Socket.io powered, instant synchronization
+- **500+ emojis** — Twemoji PNG library, randomized each round, no repeats within a round
+- **Bilingual** — Full Turkish and English support with one-tap language switching
+- **15-second timer** — Circular SVG countdown with visual urgency at 5 seconds
+- **Auto-pick** — If time runs out, a random emoji is selected automatically
+- **Live scoreboard** — Animated progress bars showing each player's progress toward the target
+- **Round results** — See exactly who picked what, with unique/duplicate highlighting
+- **Modern dark UI** — Purple-accented dark theme with smooth Reanimated animations
+- **Room codes** — 4-character alphanumeric codes (confusable characters excluded)
+
+## Screenshots
+
+| Home Screen | Gameplay | Round Results |
+|:-:|:-:|:-:|
+| Language picker, three play modes | Emoji grid, timer, live pick counter | Who picked what, point breakdown |
+
+## Tech Stack
+
+### Frontend (`/app`)
+| Technology | Purpose |
+|---|---|
+| **Expo SDK 54** | React Native framework & build tooling |
+| **Expo Router** | File-based navigation |
+| **React Native Reanimated** | Smooth animations (spring, fade, zoom) |
+| **React Native SVG** | Circular timer progress ring |
+| **Socket.io Client** | Real-time server communication |
+| **i18next + react-i18next** | Internationalization (TR/EN) |
+| **expo-localization** | Device locale detection |
+| **AsyncStorage** | Language preference persistence |
+| **Twemoji PNGs** | Cross-platform emoji rendering via CDN |
+
+### Backend (`/server`)
+| Technology | Purpose |
+|---|---|
+| **Node.js + TypeScript** | Server runtime |
+| **Express** | HTTP server |
+| **Socket.io** | Real-time WebSocket communication |
+| **tsx** | TypeScript execution without compile step |
+
+## Project Structure
+
+```
+MindMatch/
+├── app/                          # Expo React Native frontend
+│   ├── app/                      # Expo Router screens
+│   │   ├── _layout.tsx           # Root layout (dark theme, status bar)
+│   │   ├── index.tsx             # Home screen (play modes, language picker)
+│   │   └── game/
+│   │       ├── _layout.tsx       # Game stack layout
+│   │       ├── lobby.tsx         # Room lobby (code display, player list)
+│   │       └── play.tsx          # Active gameplay (emoji grid, timer, results)
+│   ├── components/
+│   │   ├── emoji-card.tsx        # Pressable emoji card with spring animation
+│   │   ├── emoji-grid.tsx        # Responsive emoji grid layout
+│   │   ├── language-picker.tsx   # TR/EN flag toggle
+│   │   ├── player-list.tsx       # Scoreboard (compact & full variants)
+│   │   └── round-result.tsx      # Round results overlay
+│   ├── hooks/
+│   │   └── use-game.ts           # Global game state (singleton + socket listeners)
+│   ├── lib/
+│   │   ├── constants.ts          # Server URL, game defaults
+│   │   ├── emoji-utils.ts        # Twemoji PNG URL helper
+│   │   ├── i18n.ts               # i18next setup with locale detection
+│   │   ├── socket.ts             # Socket.io client singleton
+│   │   └── theme.ts              # Color palette, spacing, radius tokens
+│   ├── locales/
+│   │   ├── en.json               # English translations
+│   │   └── tr.json               # Turkish translations
+│   ├── types/
+│   │   └── game.ts               # Shared TypeScript interfaces
+│   └── assets/                   # App icon, splash, favicon
+│
+├── server/                       # Node.js backend
+│   └── src/
+│       ├── index.ts              # Express + Socket.io server entry
+│       ├── socket/
+│       │   └── handler.ts        # Socket event handlers (create, join, pick, etc.)
+│       ├── game/
+│       │   ├── game-manager.ts   # Room lifecycle management
+│       │   ├── game-room.ts      # Game state machine (lobby → picking → reveal → finished)
+│       │   ├── bot.ts            # Bot logic (random delayed picks)
+│       │   └── emoji-pool.ts     # 500+ emoji codepoints, random selection
+│       ├── types/
+│       │   └── game.ts           # Authoritative type definitions
+│       └── utils/
+│           └── room-code.ts      # Room code generator
+```
+
+## Architecture
+
+### Game State Machine
+
+```
+LOBBY → PICKING → REVEAL → PICKING → ... → FINISHED
+         ↑                    |
+         └────────────────────┘
+```
+
+- **LOBBY**: Players join, host sets target score, waits for start
+- **PICKING**: N emojis displayed, 15-second countdown, players pick secretly
+- **REVEAL**: All picks shown, unique picks score +1, 5-second display
+- **FINISHED**: A player reached the target score, final standings shown
+
+### Socket Events
+
+| Direction | Event | Description |
+|---|---|---|
+| Client → Server | `random-play` | Start a game with bots |
+| Client → Server | `create-room` | Host a private room |
+| Client → Server | `join-room` | Join by room code |
+| Client → Server | `start-game` | Host starts the game |
+| Client → Server | `pick-emoji` | Submit emoji selection |
+| Server → Client | `room-created` | Room ready with code |
+| Server → Client | `round-start` | New round, emoji list, timer |
+| Server → Client | `picks-update` | "3/5 players picked" |
+| Server → Client | `round-result` | All picks + scores |
+| Server → Client | `game-over` | Winner(s) + final scores |
+
+### Scoring Algorithm
+
+```
+For each emoji picked this round:
+  count = number of players who picked this emoji
+  if count == 1:
+    that player scores +1 (unique pick)
+  else:
+    all players who picked it score 0 (duplicate)
+```
+
+All scoring is **server-authoritative**. The client never computes scores.
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+- Expo CLI (`npx expo`)
+- iOS Simulator (Xcode) or Android Emulator
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/alperyardimci/MindMatch.git
+cd MindMatch
+
+# Install server dependencies
+cd server && npm install
+
+# Install app dependencies
+cd ../app && npm install
+```
+
+### Running
+
+**1. Start the backend server:**
+
+```bash
+cd server
+npm run dev
+# Server runs on http://localhost:3001
+```
+
+**2. Start the mobile app:**
+
+```bash
+cd app
+
+# iOS Simulator
+npx expo run:ios
+
+# Android Emulator
+npx expo run:android
+```
+
+> **Note:** For physical devices, update `SERVER_URL` in `app/lib/constants.ts` to your machine's local IP address.
+
+### Development
+
+The app uses Expo's dev client. After the initial native build, Metro bundler serves JS updates instantly:
+
+```bash
+cd app
+npx expo start --dev-client
+```
+
+## Configuration
+
+| Variable | Location | Default | Description |
+|---|---|---|---|
+| `SERVER_URL` | `app/lib/constants.ts` | `localhost:3001` | Backend server address |
+| `DEFAULT_TARGET_SCORE` | `app/lib/constants.ts` | `5` | Default points to win |
+| `ROUND_TIME_LIMIT` | `app/lib/constants.ts` | `15` | Seconds per round |
+| `PORT` | `server/src/index.ts` | `3001` | Server port |
+
+## License
+
+MIT
