@@ -19,6 +19,24 @@ export interface RoundResult {
 }
 
 export type RoomState = 'lobby' | 'picking' | 'reveal' | 'finished';
+export type GameMode = 'classic' | 'duo';
+
+export interface DuoRoundHistory {
+  round: number;
+  connected: boolean;
+  emoji1: string;
+  emoji2: string;
+}
+
+export interface DuoFinalResult {
+  percentage: number;
+  matches: number;
+  totalRounds: number;
+  longestStreak: number;
+  roundHistory: DuoRoundHistory[];
+  fortune: string;
+  fortuneKey: string; // i18n key for client
+}
 
 export interface RoomInfo {
   code: string;
@@ -27,6 +45,7 @@ export interface RoomInfo {
   state: RoomState;
   players: Player[];
   currentRound: number;
+  gameMode: GameMode;
 }
 
 // Client -> Server events
@@ -41,14 +60,14 @@ export interface ClientEvents {
 
 // Server -> Client events
 export interface ServerEvents {
-  'room-created': (data: { roomCode: string; players: Player[]; targetScore: number }) => void;
+  'room-created': (data: { roomCode: string; players: Player[]; targetScore: number; gameMode: GameMode }) => void;
   'player-joined': (data: { players: Player[] }) => void;
   'player-left': (data: { players: Player[]; leftPlayerName: string }) => void;
-  'game-started': (data: { targetScore: number; playerCount: number }) => void;
-  'round-start': (data: { roundNumber: number; emojis: string[]; timeLimit: number }) => void;
+  'game-started': (data: { targetScore: number; playerCount: number; gameMode: GameMode; totalRounds?: number }) => void;
+  'round-start': (data: { roundNumber: number; emojis: string[]; timeLimit: number; totalRounds?: number }) => void;
   'pick-confirmed': (data: { emoji: string }) => void;
   'picks-update': (data: { pickedCount: number; totalPlayers: number }) => void;
-  'round-result': (data: RoundResult & { roundNumber: number }) => void;
-  'game-over': (data: { winners: { id: string; name: string; score: number }[]; finalScores: { id: string; name: string; score: number }[] }) => void;
+  'round-result': (data: RoundResult & { roundNumber: number; duoConnected?: boolean }) => void;
+  'game-over': (data: { winners: { id: string; name: string; score: number }[]; finalScores: { id: string; name: string; score: number }[]; duoResult?: DuoFinalResult }) => void;
   'error': (data: { message: string; code: string }) => void;
 }

@@ -40,5 +40,21 @@
   "uniqueSection": "Benzersiz Seçimler",
   "telepathicBond": "Telepatik Bağ",
   "notPicked": "Seçilmeyen",
-  "samePicked": "{{count}} kişi aynı seçti"
+  "samePicked": "{{count}} kişi aynı seçti",
+  "duoPickSame": "Aynı emojiyi seçin!",
+  "connected": "Bağlandı!",
+  "disconnected": "Bağlanamadı",
+  "duoRound": "Tur {{current}}/{{total}}",
+  "telepathyScore": "Telepati Skoru",
+  "connectionPercent": "Bağlantı Yüzdesi",
+  "matchCount": "{{count}}/{{total}} eşleşme",
+  "longestStreak": "En uzun seri: {{count}}",
+  "roundHistory": "Tur Geçmişi",
+  "telepathyResult": "Telepati Sonucu",
+  "fortune_soulmates": "Ruh ikizleri! Aranızdaki bağ inanılmaz güçlü. Birbirinizin düşüncelerini okuyabiliyorsunuz.",
+  "fortune_strong": "Güçlü bir telepati bağınız var! Çoğu zaman aynı frekansta düşünüyorsunuz.",
+  "fortune_good": "İyi bir bağlantınız var. Birbirinizi anlıyorsunuz ama bazen farklı yollara sapıyorsunuz.",
+  "fortune_developing": "Bağlantınız gelişiyor. Daha çok vakit geçirdikçe telepati güçlenecek!",
+  "fortune_weak": "Henüz farklı frekanslarda yayın yapıyorsunuz. Ama her büyük bağ küçük başlar!",
+  "fortune_none": "Tamamen farklı dünyalardasınız! Belki de bu sizi birbirinize tamamlıyor."
 }

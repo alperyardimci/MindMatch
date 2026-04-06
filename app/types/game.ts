@@ -17,9 +17,27 @@ export interface RoundResult {
   results: PlayerRoundResult[];
   scores: { id: string; name: string; score: number }[];
   roundNumber: number;
+  duoConnected?: boolean;
+}
+
+export interface DuoRoundHistory {
+  round: number;
+  connected: boolean;
+  emoji1: string;
+  emoji2: string;
+}
+
+export interface DuoFinalResult {
+  percentage: number;
+  matches: number;
+  totalRounds: number;
+  longestStreak: number;
+  roundHistory: DuoRoundHistory[];
+  fortuneKey: string;
 }
 
 export type GameScreenState = 'idle' | 'lobby' | 'picking' | 'reveal' | 'finished';
+export type GameMode = 'classic' | 'duo';
 
 export interface GameState {
   roomCode: string | null;
@@ -34,4 +52,8 @@ export interface GameState {
   targetScore: number;
   timeRemaining: number;
   isHost: boolean;
+  gameMode: GameMode;
+  totalRounds: number | null;
+  duoConnected: boolean | null;
+  duoResult: DuoFinalResult | null;
 }

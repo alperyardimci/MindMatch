@@ -40,5 +40,21 @@
   "uniqueSection": "Unique Picks",
   "telepathicBond": "Telepathic Bond",
   "notPicked": "Not Picked",
-  "samePicked": "{{count}} picked the same"
+  "samePicked": "{{count}} picked the same",
+  "duoPickSame": "Pick the same emoji!",
+  "connected": "Connected!",
+  "disconnected": "Disconnected",
+  "duoRound": "Round {{current}}/{{total}}",
+  "telepathyScore": "Telepathy Score",
+  "connectionPercent": "Connection Percentage",
+  "matchCount": "{{count}}/{{total}} matches",
+  "longestStreak": "Longest streak: {{count}}",
+  "roundHistory": "Round History",
+  "telepathyResult": "Telepathy Result",
+  "fortune_soulmates": "Soulmates! Your bond is incredibly strong. You can read each other's minds.",
+  "fortune_strong": "You have a strong telepathic bond! You think on the same frequency most of the time.",
+  "fortune_good": "Good connection. You understand each other but sometimes take different paths.",
+  "fortune_developing": "Your connection is developing. The more time you spend together, the stronger it gets!",
+  "fortune_weak": "You're broadcasting on different frequencies for now. But every great bond starts small!",
+  "fortune_none": "You're in completely different worlds! Maybe that's what makes you complement each other."
 }

@@ -1,9 +1,8 @@
 import { useEffect, useCallback, useState } from 'react';
 import { getSocket } from '../lib/socket';
-import { GameState } from '../types/game';
+import { GameState, GameMode } from '../types/game';
 
-// ---- Global singleton state ----
-let gameState: GameState = {
+const INITIAL: GameState = {
   roomCode: null,
   players: [],
   state: 'idle',
@@ -16,15 +15,18 @@ let gameState: GameState = {
   targetScore: 5,
   timeRemaining: 0,
   isHost: false,
+  gameMode: 'classic',
+  totalRounds: null,
+  duoConnected: null,
+  duoResult: null,
 };
 
+let gameState: GameState = { ...INITIAL };
 const listeners = new Set<() => void>();
 let timerInterval: ReturnType<typeof setInterval> | null = null;
 let socketReady = false;
 
-function notify() {
-  listeners.forEach(l => l());
-}
+function notify() { listeners.forEach(l => l()); }
 
 function setState(partial: Partial<GameState>) {
   gameState = { ...gameState, ...partial };
@@ -34,9 +36,7 @@ function setState(partial: Partial<GameState>) {
 function startTimer() {
   stopTimer();
   timerInterval = setInterval(() => {
-    if (gameState.timeRemaining > 0) {
-      setState({ timeRemaining: gameState.timeRemaining - 1 });
-    }
+    if (gameState.timeRemaining > 0) setState({ timeRemaining: gameState.timeRemaining - 1 });
   }, 1000);
 }
 
@@ -56,12 +56,21 @@ function setupSocket() {
       targetScore: data.targetScore,
       state: 'lobby',
       isHost: data.players[0]?.id === socket.id,
+      gameMode: data.gameMode || 'classic',
     });
   });
 
   socket.on('player-joined', (data: any) => setState({ players: data.players }));
   socket.on('player-left', (data: any) => setState({ players: data.players }));
-  socket.on('game-started', (data: any) => setState({ state: 'picking', targetScore: data.targetScore }));
+
+  socket.on('game-started', (data: any) => {
+    setState({
+      state: 'picking',
+      targetScore: data.targetScore,
+      gameMode: data.gameMode || 'classic',
+      totalRounds: data.totalRounds || null,
+    });
+  });
 
   socket.on('round-start', (data: any) => {
     setState({
@@ -72,6 +81,8 @@ function setupSocket() {
       pickedCount: 0,
       roundResult: null,
       timeRemaining: data.timeLimit,
+      duoConnected: null,
+      totalRounds: data.totalRounds || gameState.totalRounds,
     });
     startTimer();
   });
@@ -85,7 +96,12 @@ function setupSocket() {
       const s = data.scores.find((x: any) => x.id === p.id);
       return s ? { ...p, score: s.score } : p;
     });
-    setState({ state: 'reveal', roundResult: data, players: updatedPlayers });
+    setState({
+      state: 'reveal',
+      roundResult: data,
+      players: updatedPlayers,
+      duoConnected: data.duoConnected ?? null,
+    });
   });
 
   socket.on('game-over', (data: any) => {
@@ -94,11 +110,15 @@ function setupSocket() {
       const s = data.finalScores.find((x: any) => x.id === p.id);
       return s ? { ...p, score: s.score } : p;
     });
-    setState({ state: 'finished', winners: data.winners, players: updatedPlayers });
+    setState({
+      state: 'finished',
+      winners: data.winners,
+      players: updatedPlayers,
+      duoResult: data.duoResult || null,
+    });
   });
 }
 
-// ---- Hook ----
 export function useGame() {
   const [, forceUpdate] = useState(0);
 
@@ -132,20 +152,12 @@ export function useGame() {
   const leaveRoom = useCallback(() => {
     if (gameState.roomCode) getSocket().emit('leave-room', { roomCode: gameState.roomCode });
     stopTimer();
-    setState({
-      roomCode: null, players: [], state: 'idle', roundNumber: 0,
-      emojis: [], myPick: null, pickedCount: 0, roundResult: null,
-      winners: null, targetScore: 5, timeRemaining: 0, isHost: false,
-    });
+    setState({ ...INITIAL });
   }, []);
 
   const reset = useCallback(() => {
     stopTimer();
-    setState({
-      roomCode: null, players: [], state: 'idle', roundNumber: 0,
-      emojis: [], myPick: null, pickedCount: 0, roundResult: null,
-      winners: null, targetScore: 5, timeRemaining: 0, isHost: false,
-    });
+    setState({ ...INITIAL });
   }, []);
 
   return { state: gameState, randomPlay, createRoom, joinRoom, startGame, pickEmoji, leaveRoom, reset };

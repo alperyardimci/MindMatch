@@ -136,6 +136,7 @@ export default function PlayScreen() {
   const handlePlayAgain = () => { reset(); router.replace('/'); };
 
   const hasPicked = !!state.myPick;
+  const isDuo = state.gameMode === 'duo';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -146,18 +147,29 @@ export default function PlayScreen() {
         </Pressable>
         <Animated.View entering={ZoomIn} style={styles.roundPill}>
           <Text style={styles.roundLabel}>{t('round')}</Text>
-          <Text style={styles.roundNum}>{state.roundNumber}</Text>
+          <Text style={styles.roundNum}>
+            {state.totalRounds ? `${state.roundNumber}/${state.totalRounds}` : state.roundNumber}
+          </Text>
         </Animated.View>
         <TimerRing seconds={state.timeRemaining} total={ROUND_TIME_LIMIT} />
       </View>
 
       {/* Scoreboard */}
-      <PlayerList players={state.players} targetScore={state.targetScore} compact />
+      {isDuo ? (
+        <View style={styles.duoTopScore}>
+          <Text style={styles.duoTopLabel}>{t('telepathyScore')}</Text>
+          <Text style={styles.duoTopPct}>{state.players[0]?.score ?? 0}%</Text>
+        </View>
+      ) : (
+        <PlayerList players={state.players} targetScore={state.targetScore} compact />
+      )}
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Status */}
         {state.state === 'picking' && !hasPicked && !showTimeUp && (
-          <Animated.Text entering={FadeIn} style={styles.instruction}>{t('pickEmoji')}</Animated.Text>
+          <Animated.Text entering={FadeIn} style={styles.instruction}>
+            {isDuo ? t('duoPickSame') : t('pickEmoji')}
+          </Animated.Text>
         )}
         {state.state === 'picking' && hasPicked && (
           <Animated.Text style={[styles.waitMsg, pulseStyle]}>{t('waitingForPicks')}</Animated.Text>
@@ -209,44 +221,129 @@ export default function PlayScreen() {
         )}
       </ScrollView>
 
-      {/* Round Result */}
-      <Modal visible={showResult && !!state.roundResult} transparent animationType="fade">
-        <Pressable style={styles.modalOverlay} onPress={() => setShowResult(false)}>
-          <Animated.View entering={ZoomIn.springify()} style={styles.resultSheet}>
-            {state.roundResult && <RoundResultView result={state.roundResult} roundEmojis={state.emojis} />}
-            <Text style={styles.tapHint}>Tap to continue</Text>
-          </Animated.View>
-        </Pressable>
-      </Modal>
+      {/* Round Result - Classic */}
+      {!isDuo && (
+        <Modal visible={showResult && !!state.roundResult} transparent animationType="fade">
+          <Pressable style={styles.modalOverlay} onPress={() => setShowResult(false)}>
+            <Animated.View entering={ZoomIn.springify()} style={styles.resultSheet}>
+              {state.roundResult && <RoundResultView result={state.roundResult} roundEmojis={state.emojis} />}
+              <Text style={styles.tapHint}>Tap to continue</Text>
+            </Animated.View>
+          </Pressable>
+        </Modal>
+      )}
 
-      {/* Game Over */}
-      <Modal visible={state.state === 'finished'} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <Animated.View entering={ZoomIn.springify()} style={styles.gameOverSheet}>
-            <Image source={{ uri: getEmojiImageUrl('1f3c6') }} style={styles.trophyImg} />
-            <Text style={styles.gameOverTitle}>{t('gameOver')}</Text>
+      {/* Round Result - Duo */}
+      {isDuo && (
+        <Modal visible={showResult && !!state.roundResult} transparent animationType="fade">
+          <Pressable style={styles.modalOverlay} onPress={() => setShowResult(false)}>
+            <Animated.View entering={ZoomIn.springify()} style={styles.duoResultCard}>
+              {state.duoConnected !== null && (
+                <>
+                  <Image
+                    source={{ uri: getEmojiImageUrl(state.duoConnected ? '1f91d' : '1f494') }}
+                    style={styles.duoResultIcon}
+                  />
+                  <Text style={[styles.duoResultStatus, state.duoConnected ? styles.duoConnected : styles.duoDisconnected]}>
+                    {state.duoConnected ? t('connected') : t('disconnected')}
+                  </Text>
+                  {state.roundResult && (
+                    <View style={styles.duoPicksRow}>
+                      {state.roundResult.results.map((r) => (
+                        <View key={r.playerId} style={styles.duoPickItem}>
+                          <Text style={styles.duoPickName}>{r.name}</Text>
+                          <Image source={{ uri: getEmojiImageUrl(r.emoji) }} style={styles.duoPickEmoji} />
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  <Text style={styles.duoScoreLabel}>{t('telepathyScore')}</Text>
+                  <Text style={styles.duoScoreValue}>{state.players[0]?.score ?? 0}%</Text>
+                </>
+              )}
+            </Animated.View>
+          </Pressable>
+        </Modal>
+      )}
 
-            {state.winners && state.winners.length > 0 && (
-              <View style={styles.winnerSection}>
-                <Text style={styles.winnerLabel}>
-                  {state.winners.length > 1 ? t('winners') : t('winner')}
-                </Text>
-                {state.winners.map((w) => (
-                  <Text key={w.id} style={styles.winnerName}>{w.name} — {w.score} pts</Text>
-                ))}
+      {/* Game Over - Classic */}
+      {!isDuo && (
+        <Modal visible={state.state === 'finished'} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <Animated.View entering={ZoomIn.springify()} style={styles.gameOverSheet}>
+              <Image source={{ uri: getEmojiImageUrl('1f3c6') }} style={styles.trophyImg} />
+              <Text style={styles.gameOverTitle}>{t('gameOver')}</Text>
+              {state.winners && state.winners.length > 0 && (
+                <View style={styles.winnerSection}>
+                  <Text style={styles.winnerLabel}>
+                    {state.winners.length > 1 ? t('winners') : t('winner')}
+                  </Text>
+                  {state.winners.map((w) => (
+                    <Text key={w.id} style={styles.winnerName}>{w.name} — {w.score} pts</Text>
+                  ))}
+                </View>
+              )}
+              <View style={styles.finalScores}>
+                <PlayerList players={state.players} targetScore={state.targetScore} />
               </View>
-            )}
+              <Pressable style={({ pressed }) => [styles.playAgainBtn, pressed && styles.pressed]} onPress={handlePlayAgain}>
+                <Text style={styles.playAgainText}>{t('playAgain')}</Text>
+              </Pressable>
+            </Animated.View>
+          </View>
+        </Modal>
+      )}
 
-            <View style={styles.finalScores}>
-              <PlayerList players={state.players} targetScore={state.targetScore} />
-            </View>
+      {/* Game Over - Duo Telepathy Result */}
+      {isDuo && (
+        <Modal visible={state.state === 'finished'} transparent animationType="fade">
+          <ScrollView contentContainerStyle={styles.modalOverlay}>
+            <Animated.View entering={ZoomIn.springify()} style={styles.duoFinalSheet}>
+              <Image source={{ uri: getEmojiImageUrl('1f52e') }} style={styles.trophyImg} />
+              <Text style={styles.duoFinalTitle}>{t('telepathyResult')}</Text>
 
-            <Pressable style={({ pressed }) => [styles.playAgainBtn, pressed && styles.pressed]} onPress={handlePlayAgain}>
-              <Text style={styles.playAgainText}>{t('playAgain')}</Text>
-            </Pressable>
-          </Animated.View>
-        </View>
-      </Modal>
+              {state.duoResult && (
+                <>
+                  {/* Big percentage */}
+                  <Text style={styles.duoPercent}>{state.duoResult.percentage}%</Text>
+                  <Text style={styles.duoPercentLabel}>{t('connectionPercent')}</Text>
+
+                  {/* Stats */}
+                  <View style={styles.duoStats}>
+                    <Text style={styles.duoStat}>
+                      {t('matchCount', { count: state.duoResult.matches, total: state.duoResult.totalRounds })}
+                    </Text>
+                    <Text style={styles.duoStat}>
+                      {t('longestStreak', { count: state.duoResult.longestStreak })}
+                    </Text>
+                  </View>
+
+                  {/* Round history dots */}
+                  <Text style={styles.duoHistoryLabel}>{t('roundHistory')}</Text>
+                  <View style={styles.duoHistoryRow}>
+                    {state.duoResult.roundHistory.map((rh) => (
+                      <View key={rh.round} style={styles.duoHistoryItem}>
+                        <View style={[styles.duoHistoryDot, rh.connected ? styles.duoHistoryConnected : styles.duoHistoryDisconnected]} />
+                        <Text style={styles.duoHistoryNum}>{rh.round}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* Fortune text */}
+                  <View style={styles.fortuneCard}>
+                    <Image source={{ uri: getEmojiImageUrl('1f52e') }} style={styles.fortuneIcon} />
+                    <Text style={styles.fortuneText}>{t(state.duoResult.fortuneKey)}</Text>
+                  </View>
+                </>
+              )}
+
+              <Pressable style={({ pressed }) => [styles.playAgainBtn, pressed && styles.pressed]} onPress={handlePlayAgain}>
+                <Text style={styles.playAgainText}>{t('playAgain')}</Text>
+              </Pressable>
+            </Animated.View>
+          </ScrollView>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -327,4 +424,64 @@ const styles = StyleSheet.create({
     paddingHorizontal: 48, borderRadius: radius.xl,
   },
   playAgainText: { fontSize: 17, fontWeight: '700', color: colors.text },
+
+  // Duo top score bar
+  duoTopScore: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, paddingVertical: 6,
+  },
+  duoTopLabel: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+  duoTopPct: { fontSize: 20, fontWeight: '800', color: colors.primaryLight },
+
+  // Duo round result
+  duoResultCard: {
+    backgroundColor: colors.bgCard, borderRadius: radius.xl, padding: spacing.xl,
+    width: '100%', maxWidth: 340, alignItems: 'center',
+    borderWidth: 1, borderColor: colors.border,
+  },
+  duoResultIcon: { width: 64, height: 64, marginBottom: spacing.sm },
+  duoResultStatus: { fontSize: 24, fontWeight: '800', marginBottom: spacing.md },
+  duoConnected: { color: colors.success },
+  duoDisconnected: { color: colors.error },
+  duoPicksRow: {
+    flexDirection: 'row', gap: 32, marginBottom: spacing.md,
+  },
+  duoPickItem: { alignItems: 'center', gap: 6 },
+  duoPickName: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+  duoPickEmoji: { width: 48, height: 48 },
+  duoScoreLabel: { fontSize: 12, color: colors.textMuted, marginTop: spacing.sm },
+  duoScoreValue: { fontSize: 28, fontWeight: '800', color: colors.primaryLight },
+
+  // Duo final result
+  duoFinalSheet: {
+    backgroundColor: colors.bgCard, borderRadius: radius.xl, padding: spacing.xl,
+    width: '100%', maxWidth: 380, alignItems: 'center',
+    borderWidth: 1, borderColor: colors.border,
+  },
+  duoFinalTitle: { fontSize: 24, fontWeight: '800', color: colors.text, marginBottom: spacing.md },
+  duoPercent: { fontSize: 72, fontWeight: '900', color: colors.accent },
+  duoPercentLabel: { fontSize: 14, color: colors.textMuted, marginBottom: spacing.md },
+  duoStats: {
+    flexDirection: 'row', gap: 24, marginBottom: spacing.lg,
+  },
+  duoStat: {
+    fontSize: 13, fontWeight: '600', color: colors.textSecondary,
+    backgroundColor: colors.bgCardLight, paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: radius.full, overflow: 'hidden',
+  },
+  duoHistoryLabel: { fontSize: 12, fontWeight: '600', color: colors.textMuted, marginBottom: 8 },
+  duoHistoryRow: { flexDirection: 'row', gap: 8, marginBottom: spacing.lg },
+  duoHistoryItem: { alignItems: 'center', gap: 4 },
+  duoHistoryDot: { width: 20, height: 20, borderRadius: 10 },
+  duoHistoryConnected: { backgroundColor: colors.success },
+  duoHistoryDisconnected: { backgroundColor: colors.error },
+  duoHistoryNum: { fontSize: 10, color: colors.textMuted },
+  fortuneCard: {
+    backgroundColor: colors.bgCardLight, borderRadius: radius.lg,
+    padding: spacing.md, marginBottom: spacing.lg, width: '100%',
+    flexDirection: 'row', gap: 12, alignItems: 'flex-start',
+    borderWidth: 1, borderColor: colors.border,
+  },
+  fortuneIcon: { width: 28, height: 28, flexShrink: 0 },
+  fortuneText: { fontSize: 14, color: colors.textSecondary, lineHeight: 20, flex: 1 },
 });

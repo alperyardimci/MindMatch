@@ -31,17 +31,38 @@ The catch? You need to **think differently** from everyone else. The more predic
 
 ## Game Modes
 
-### Random Play
-Jump into a quick 5-player game instantly. Target score is 5 points. No waiting, no setup — just tap and play.
+### Classic Mode (3+ players)
+The standard mode — **think differently** to score. Unique picks earn points, duplicates earn nothing.
 
-### Create Room
-Host a private game for friends:
-- Set a custom target score (1–50)
-- Get a 4-character room code to share
-- Start the game when everyone has joined
+- **Random Play**: Jump into a quick 5-player game instantly. Target score is 5 points.
+- **Create Room**: Host a private game, set a custom target score (1–50), share the room code.
+- **Join Room**: Enter a friend's 4-character room code.
 
-### Join Room
-Enter a friend's 4-character room code to join their game.
+### Duo Telepathy Mode (2 players)
+When exactly 2 human players are in a room, the game automatically switches to **Telepathy Mode** — the goal flips: **pick the SAME emoji** as your partner!
+
+- **10 fixed rounds**, 5 emojis per round
+- Match = **Connected!** / Miss = **Disconnected**
+- Final result: **0–100% telepathy score** + fortune reading
+
+**Duo Scoring:**
+| Situation | Points |
+|---|---|
+| Match (no streak) | **10** |
+| Match (2nd+ in a row) | **15** (streak bonus) |
+| Miss | **0** (streak resets) |
+
+Maximum 100 points. Streaks are heavily rewarded — consecutive connections earn 50% more per match.
+
+**Telepathy Fortunes** (based on final percentage):
+| Range | Reading |
+|---|---|
+| 90–100% | Soulmates! You can read each other's minds. |
+| 75–89% | Strong telepathic bond! Same frequency most of the time. |
+| 55–74% | Good connection. You understand each other. |
+| 35–54% | Developing bond. More time together will strengthen it! |
+| 15–34% | Different frequencies for now. Every great bond starts small! |
+| 0–14% | Completely different worlds! Maybe that's what makes you complementary. |
 
 ## Features
 
@@ -55,6 +76,7 @@ Enter a friend's 4-character room code to join their game.
 - **Emoji-grouped results** — Round results grouped by emoji: unique picks, telepathic bonds (duplicates), and unpicked emojis at a glance
 - **Modern dark UI** — Purple-accented dark theme with smooth Reanimated animations
 - **Room codes** — 4-character alphanumeric codes (confusable characters excluded)
+- **Duo Telepathy Mode** — 2-player rooms auto-switch to connection mode with 10 rounds, streak scoring, round history, and fortune readings
 
 ## Screenshots
 
@@ -147,7 +169,7 @@ LOBBY → PICKING → REVEAL → PICKING → ... → FINISHED
 - **LOBBY**: Players join, host sets target score, waits for start
 - **PICKING**: N emojis displayed, 15-second countdown, players pick secretly
 - **REVEAL**: All picks shown, unique picks score +1, 5-second display
-- **FINISHED**: A player reached the target score, final standings shown
+- **FINISHED**: Classic — a player reached the target score. Duo — 10 rounds completed, telepathy percentage + fortune shown
 
 ### Socket Events
 
@@ -175,7 +197,21 @@ For each emoji picked this round:
     all players who picked it score 0      → shown as "Telepatik Bağ / Telepathic Bond"
 ```
 
-Results are grouped by emoji, not by player — making it instantly clear who formed a "telepathic bond" by picking the same emoji. All scoring is **server-authoritative**.
+Results are grouped by emoji, not by player — making it instantly clear who formed a "telepathic bond" by picking the same emoji.
+
+**Duo Mode Scoring:**
+```
+points = 0, streak = 0
+For each round:
+  if both players picked the same emoji:
+    streak += 1
+    points += 15 if streak >= 2, else 10
+  else:
+    streak = 0
+Final percentage = min(100, points)
+```
+
+All scoring is **server-authoritative**.
 
 ## Getting Started
 

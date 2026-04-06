@@ -1,9 +1,21 @@
 import { Server } from 'socket.io';
-import { Player, RoomState, RoundResult, PlayerRoundResult } from '../types/game.js';
+import { Player, RoomState, RoundResult, PlayerRoundResult, GameMode, DuoRoundHistory, DuoFinalResult } from '../types/game.js';
 import { getRandomEmojis } from './emoji-pool.js';
 import { scheduleBotPick } from './bot.js';
 
-const ROUND_TIME_LIMIT = 15; // seconds
+const ROUND_TIME_LIMIT = 15;
+const DUO_TOTAL_ROUNDS = 10;
+const DUO_EMOJIS_PER_ROUND = 5;
+
+// Fortune keys based on percentage ranges
+function getDuoFortuneKey(pct: number): string {
+  if (pct >= 90) return 'fortune_soulmates';
+  if (pct >= 75) return 'fortune_strong';
+  if (pct >= 55) return 'fortune_good';
+  if (pct >= 35) return 'fortune_developing';
+  if (pct >= 15) return 'fortune_weak';
+  return 'fortune_none';
+}
 
 export class GameRoom {
   code: string;
@@ -16,7 +28,14 @@ export class GameRoom {
   picks: Map<string, string> = new Map();
   roundTimer: NodeJS.Timeout | null = null;
   botTimers: NodeJS.Timeout[] = [];
+  gameMode: GameMode = 'classic';
   private io: Server;
+
+  // Duo mode state
+  duoHistory: DuoRoundHistory[] = [];
+  duoCurrentStreak = 0;
+  duoLongestStreak = 0;
+  duoMatches = 0;
 
   constructor(code: string, hostId: string, targetScore: number, io: Server) {
     this.code = code;
@@ -49,17 +68,37 @@ export class GameRoom {
     return this.getPlayerList().filter(p => !p.isBot && p.isConnected).length;
   }
 
+  isDuo(): boolean {
+    return this.gameMode === 'duo';
+  }
+
   startGame(): void {
+    // Detect duo mode: exactly 2 players, both human
+    const players = this.getPlayerList();
+    if (players.length === 2 && players.every(p => !p.isBot)) {
+      this.gameMode = 'duo';
+    } else {
+      this.gameMode = 'classic';
+    }
+
     this.state = 'picking';
     this.currentRound = 0;
-    // Reset scores
+    this.duoHistory = [];
+    this.duoCurrentStreak = 0;
+    this.duoLongestStreak = 0;
+    this.duoMatches = 0;
+
     for (const player of this.players.values()) {
       player.score = 0;
     }
+
     this.io.to(this.code).emit('game-started', {
-      targetScore: this.targetScore,
+      targetScore: this.isDuo() ? 100 : this.targetScore,
       playerCount: this.players.size,
+      gameMode: this.gameMode,
+      totalRounds: this.isDuo() ? DUO_TOTAL_ROUNDS : undefined,
     });
+
     this.startNextRound();
   }
 
@@ -68,14 +107,15 @@ export class GameRoom {
     this.picks.clear();
     this.state = 'picking';
 
-    // Pick N random emojis where N = number of players
-    const playerCount = this.players.size;
-    this.roundEmojis = getRandomEmojis(playerCount);
+    // Duo: always 5 emojis. Classic: N emojis for N players
+    const emojiCount = this.isDuo() ? DUO_EMOJIS_PER_ROUND : this.players.size;
+    this.roundEmojis = getRandomEmojis(emojiCount);
 
     this.io.to(this.code).emit('round-start', {
       roundNumber: this.currentRound,
       emojis: this.roundEmojis,
       timeLimit: ROUND_TIME_LIMIT,
+      totalRounds: this.isDuo() ? DUO_TOTAL_ROUNDS : undefined,
     });
 
     // Schedule bot picks
@@ -89,7 +129,6 @@ export class GameRoom {
       }
     }
 
-    // Round timer - auto-pick for anyone who hasn't picked
     this.roundTimer = setTimeout(() => {
       this.autoPickRemaining();
     }, ROUND_TIME_LIMIT * 1000);
@@ -103,13 +142,11 @@ export class GameRoom {
 
     this.picks.set(playerId, emoji);
 
-    // Notify room about pick count (don't reveal what was picked)
     this.io.to(this.code).emit('picks-update', {
       pickedCount: this.picks.size,
       totalPlayers: this.players.size,
     });
 
-    // Check if all players have picked
     if (this.picks.size === this.players.size) {
       this.endRound();
     }
@@ -131,25 +168,29 @@ export class GameRoom {
     if (this.state !== 'picking') return;
     this.state = 'reveal';
 
-    // Clear timers
     if (this.roundTimer) {
       clearTimeout(this.roundTimer);
       this.roundTimer = null;
     }
-    for (const timer of this.botTimers) {
-      clearTimeout(timer);
-    }
+    for (const timer of this.botTimers) clearTimeout(timer);
     this.botTimers = [];
 
-    // Score the round
-    const result = this.scoreRound();
+    if (this.isDuo()) {
+      this.endDuoRound();
+    } else {
+      this.endClassicRound();
+    }
+  }
+
+  // ---- Classic mode scoring ----
+  private endClassicRound(): void {
+    const result = this.scoreClassicRound();
 
     this.io.to(this.code).emit('round-result', {
       ...result,
       roundNumber: this.currentRound,
     });
 
-    // Check for winners
     const winners = this.getPlayerList().filter(p => p.score >= this.targetScore);
     if (winners.length > 0) {
       this.state = 'finished';
@@ -158,17 +199,13 @@ export class GameRoom {
         finalScores: this.getPlayerList().map(p => ({ id: p.id, name: p.name, score: p.score })),
       });
     } else {
-      // Start next round after delay
       setTimeout(() => {
-        if (this.state === 'reveal') {
-          this.startNextRound();
-        }
+        if (this.state === 'reveal') this.startNextRound();
       }, 5000);
     }
   }
 
-  private scoreRound(): RoundResult {
-    // Count emoji occurrences
+  private scoreClassicRound(): RoundResult {
     const emojiCounts = new Map<string, number>();
     for (const emoji of this.picks.values()) {
       emojiCounts.set(emoji, (emojiCounts.get(emoji) || 0) + 1);
@@ -178,20 +215,116 @@ export class GameRoom {
     for (const [playerId, emoji] of this.picks.entries()) {
       const isUnique = emojiCounts.get(emoji) === 1;
       const player = this.players.get(playerId)!;
-      if (isUnique) {
-        player.score += 1;
-      }
-      results.push({
-        playerId,
-        name: player.name,
-        emoji,
-        scoredPoint: isUnique,
-      });
+      if (isUnique) player.score += 1;
+      results.push({ playerId, name: player.name, emoji, scoredPoint: isUnique });
     }
 
     return {
       results,
       scores: this.getPlayerList().map(p => ({ id: p.id, name: p.name, score: p.score })),
+    };
+  }
+
+  // ---- Duo mode scoring ----
+  private endDuoRound(): void {
+    const playerIds = Array.from(this.picks.keys());
+    const emoji1 = this.picks.get(playerIds[0])!;
+    const emoji2 = this.picks.get(playerIds[1])!;
+    const connected = emoji1 === emoji2;
+
+    // Track history
+    if (connected) {
+      this.duoMatches++;
+      this.duoCurrentStreak++;
+      if (this.duoCurrentStreak > this.duoLongestStreak) {
+        this.duoLongestStreak = this.duoCurrentStreak;
+      }
+    } else {
+      this.duoCurrentStreak = 0;
+    }
+
+    this.duoHistory.push({
+      round: this.currentRound,
+      connected,
+      emoji1,
+      emoji2,
+    });
+
+    // In duo mode, "scoredPoint" means connected
+    const results: PlayerRoundResult[] = [];
+    for (const [playerId, emoji] of this.picks.entries()) {
+      const player = this.players.get(playerId)!;
+      results.push({ playerId, name: player.name, emoji, scoredPoint: connected });
+    }
+
+    // Update display scores (running percentage)
+    const currentPct = this.calculateDuoPercentage();
+    for (const player of this.players.values()) {
+      player.score = currentPct;
+    }
+
+    this.io.to(this.code).emit('round-result', {
+      results,
+      scores: this.getPlayerList().map(p => ({ id: p.id, name: p.name, score: p.score })),
+      roundNumber: this.currentRound,
+      duoConnected: connected,
+    });
+
+    // Check if 10 rounds done
+    if (this.currentRound >= DUO_TOTAL_ROUNDS) {
+      this.state = 'finished';
+      const duoResult = this.buildDuoFinalResult();
+      this.io.to(this.code).emit('game-over', {
+        winners: this.getPlayerList().map(p => ({ id: p.id, name: p.name, score: duoResult.percentage })),
+        finalScores: this.getPlayerList().map(p => ({ id: p.id, name: p.name, score: duoResult.percentage })),
+        duoResult,
+      });
+    } else {
+      setTimeout(() => {
+        if (this.state === 'reveal') this.startNextRound();
+      }, 4000);
+    }
+  }
+
+  private calculateDuoPercentage(): number {
+    // Simple point system:
+    // - Each match = 10 points
+    // - Streak bonus: 2nd+ consecutive match = +5 extra
+    // - Miss = 0, streak resets
+    // - Max 100
+    //
+    // Examples:
+    //   10/10 perfect streak: 10 + 15*9 = 145 → capped at 100
+    //   5/10 scattered:       5*10 = 50
+    //   5/10 with 3-streak:   10+15+15 + 10+10 = 60
+    //   7/10 with 5-streak:   10+15+15+15+15 + 10+10 = 90
+
+    let points = 0;
+    let streak = 0;
+
+    for (const rh of this.duoHistory) {
+      if (rh.connected) {
+        streak++;
+        points += streak >= 2 ? 15 : 10;
+      } else {
+        streak = 0;
+      }
+    }
+
+    return Math.min(100, Math.max(0, points));
+  }
+
+  private buildDuoFinalResult(): DuoFinalResult {
+    const percentage = this.calculateDuoPercentage();
+    const fortuneKey = getDuoFortuneKey(percentage);
+    return {
+      percentage,
+      matches: this.duoMatches,
+      totalRounds: DUO_TOTAL_ROUNDS,
+      longestStreak: this.duoLongestStreak,
+      roundHistory: this.duoHistory,
+      fortune: '', // Client will use fortuneKey for i18n
+      fortuneKey,
     };
   }
 
