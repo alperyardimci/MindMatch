@@ -1,7 +1,7 @@
 import { Server } from 'socket.io';
-import { Player, RoomState, RoundResult, PlayerRoundResult, GameMode, DuoRoundHistory, DuoFinalResult } from '../types/game.js';
-import { getRandomEmojis } from './emoji-pool.js';
-import { scheduleBotPick } from './bot.js';
+import { Player, RoomState, RoundResult, PlayerRoundResult, GameMode, DuoRoundHistory, DuoFinalResult } from '../types/game';
+import { getRandomEmojis } from './emoji-pool';
+import { scheduleBotPick } from './bot';
 
 const ROUND_TIME_LIMIT = 15;
 const DUO_TOTAL_ROUNDS = 10;
@@ -287,17 +287,10 @@ export class GameRoom {
   }
 
   private calculateDuoPercentage(): number {
-    // Simple point system:
-    // - Each match = 10 points
-    // - Streak bonus: 2nd+ consecutive match = +5 extra
-    // - Miss = 0, streak resets
-    // - Max 100
-    //
-    // Examples:
-    //   10/10 perfect streak: 10 + 15*9 = 145 → capped at 100
-    //   5/10 scattered:       5*10 = 50
-    //   5/10 with 3-streak:   10+15+15 + 10+10 = 60
-    //   7/10 with 5-streak:   10+15+15+15+15 + 10+10 = 90
+    // Point system:
+    // - Match = +10 (streak 2+ = +15)
+    // - Miss = -5
+    // - Max 100, min 0
 
     let points = 0;
     let streak = 0;
@@ -308,6 +301,7 @@ export class GameRoom {
         points += streak >= 2 ? 15 : 10;
       } else {
         streak = 0;
+        points -= 5;
       }
     }
 
@@ -326,6 +320,26 @@ export class GameRoom {
       fortune: '', // Client will use fortuneKey for i18n
       fortuneKey,
     };
+  }
+
+  resetToLobby(): void {
+    this.cleanup();
+    this.state = 'lobby';
+    this.currentRound = 0;
+    this.roundEmojis = [];
+    this.picks.clear();
+    this.duoHistory = [];
+    this.duoCurrentStreak = 0;
+    this.duoLongestStreak = 0;
+    this.duoMatches = 0;
+    this.gameMode = 'classic';
+    for (const player of this.players.values()) {
+      player.score = 0;
+    }
+  }
+
+  updateTargetScore(score: number): void {
+    this.targetScore = Math.max(1, Math.min(50, score));
   }
 
   cleanup(): void {

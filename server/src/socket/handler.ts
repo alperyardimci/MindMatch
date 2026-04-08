@@ -1,5 +1,5 @@
 import { Server, Socket } from 'socket.io';
-import { GameManager } from '../game/game-manager.js';
+import { GameManager } from '../game/game-manager';
 
 export function setupSocketHandlers(io: Server): void {
   const manager = new GameManager(io);
@@ -77,6 +77,34 @@ export function setupSocketHandlers(io: Server): void {
       if (success) {
         socket.emit('pick-confirmed', { emoji });
       }
+    });
+
+    socket.on('restart-game', ({ roomCode }: { roomCode: string }) => {
+      const room = manager.getRoom(roomCode);
+      if (!room) return;
+      if (room.hostId !== socket.id) return;
+      if (room.state !== 'finished') return;
+
+      room.resetToLobby();
+
+      io.to(room.code).emit('room-returned-to-lobby', {
+        roomCode: room.code,
+        players: room.getPlayerList(),
+        targetScore: room.targetScore,
+      });
+    });
+
+    socket.on('update-room', ({ roomCode, targetScore }: { roomCode: string; targetScore: number }) => {
+      const room = manager.getRoom(roomCode);
+      if (!room) return;
+      if (room.hostId !== socket.id) return;
+      if (room.state !== 'lobby') return;
+
+      room.updateTargetScore(targetScore);
+
+      io.to(room.code).emit('room-updated', {
+        targetScore: room.targetScore,
+      });
     });
 
     socket.on('leave-room', ({ roomCode }: { roomCode: string }) => {

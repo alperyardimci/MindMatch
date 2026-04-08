@@ -1,8 +1,8 @@
 import { Server } from 'socket.io';
-import { GameRoom } from './game-room.js';
-import { Player } from '../types/game.js';
-import { generateRoomCode } from '../utils/room-code.js';
-import { getBotName } from './bot.js';
+import { GameRoom } from './game-room';
+import { Player } from '../types/game';
+import { generateRoomCode } from '../utils/room-code';
+import { getBotName } from './bot';
 
 export class GameManager {
   private rooms: Map<string, GameRoom> = new Map();
