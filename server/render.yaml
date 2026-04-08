@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: mindmatch-server
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npx tsx src/index.ts
+    envVars:
+      - key: PORT
+        value: 10000

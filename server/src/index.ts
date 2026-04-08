@@ -20,6 +20,6 @@ app.get('/', (_req, res) => {
 setupSocketHandlers(io);
 
 const PORT = process.env.PORT || 3001;
-httpServer.listen(PORT, () => {
+httpServer.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`MindMatch server listening on port ${PORT}`);
 });
